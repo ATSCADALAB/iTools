@@ -1,0 +1,408 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>8.0.30703</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{C7E7DBB8-229D-42A6-B643-92A6F77F668E}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>ATSCADA.iWinTools</RootNamespace>
+    <AssemblyName>iTools</AssemblyName>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <TargetFrameworkProfile>
+    </TargetFrameworkProfile>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup>
+    <StartupObject />
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="iDriver, Version=2.2.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>C:\Program Files\ATPro\ATSCADA\iDriver.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Office.Interop.Excel, Version=15.0.0.0, Culture=neutral, PublicKeyToken=71e9bce111e9429c, processorArchitecture=MSIL">
+      <HintPath>packages\Microsoft.Office.Interop.Excel.15.0.4420.1017\lib\net20\Microsoft.Office.Interop.Excel.dll</HintPath>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </Reference>
+    <Reference Include="MySql.Data, Version=6.7.4.0, Culture=neutral, PublicKeyToken=c5687fc88969c44d, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>C:\Program Files\MySQL\Connector NET 6.7.4\Assemblies\v4.5\MySql.Data.dll</HintPath>
+      <Private>True</Private>
+      <EmbedInteropTypes>False</EmbedInteropTypes>
+    </Reference>
+    <Reference Include="MySql.Data.Entity, Version=6.6.5.0, Culture=neutral, PublicKeyToken=c5687fc88969c44d, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>C:\Program Files\MySQL\Connector NET 6.7.4\Assemblies\v4.5\MySql.Data.Entity.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.ComponentModel.DataAnnotations" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Data.Entity" />
+    <Reference Include="System.IdentityModel" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Security" />
+    <Reference Include="System.ServiceModel" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml" />
+    <Reference Include="ToolExtensions, Version=1.1.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>C:\Program Files\ATPro\ATSCADA\ToolExtensions.dll</HintPath>
+    </Reference>
+    <Reference Include="ZedGraph, Version=5.1.5.28844, Culture=neutral, PublicKeyToken=02a83cbd123fcd60, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>C:\Program Files\ATPro\ATSCADA\ZedGraph.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Account.cs" />
+    <Compile Include="Alarm\AlarmCommon.cs" />
+    <Compile Include="Alarm\AlarmTag.cs" />
+    <Compile Include="Alarm\iAlarmActions.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Alarm\iAlarmActions.designer.cs">
+      <DependentUpon>iAlarmActions.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Alarm\iAlarmLabel.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="CertificateEngine.cs" />
+    <Compile Include="CryptionEngine.cs" />
+    <Compile Include="CustomNetTcpBinding.cs" />
+    <Compile Include="CustomValidator.cs" />
+    <Compile Include="Database\DatabaseType.cs" />
+    <Compile Include="Database\MSSQLHelper.cs" />
+    <Compile Include="Encyption\MD5.cs" />
+    <Compile Include="Logger\DataLogParam.cs" />
+    <Compile Include="Logger\iAlarmLoggerSettings.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Logger\iAlarmLoggerSettings.designer.cs">
+      <DependentUpon>iAlarmLoggerSettings.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Alarm\iAlarmStatus.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Alarm\iAlarmStatus.designer.cs">
+      <DependentUpon>iAlarmStatus.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Alarm\iAlarmViewer.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Alarm\iAlarmViewer.designer.cs">
+      <DependentUpon>iAlarmViewer.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Authentication\AuthenticationCommon.cs" />
+    <Compile Include="Authentication\iCreateUserAccount.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Authentication\iCreateUserAccount.designer.cs">
+      <DependentUpon>iCreateUserAccount.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Authentication\iLogin.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Authentication\iLogin.designer.cs">
+      <DependentUpon>iLogin.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Authentication\iUpdateUserAccount.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Authentication\iUpdateUserAccount.designer.cs">
+      <DependentUpon>iUpdateUserAccount.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Common.cs" />
+    <Compile Include="Database\DatabaseParametter.cs" />
+    <Compile Include="Database\IDatabaseHelper.cs" />
+    <Compile Include="Database\MySQLHelper.cs" />
+    <Compile Include="Data\iButton.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Data\iButtonWrite.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Data\iInput.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Data\iInput.designer.cs">
+      <DependentUpon>iInput.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Data\iLabel.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Data\iStatus.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Data\iStatus.designer.cs">
+      <DependentUpon>iStatus.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Data\iTextBox.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Loading\iLoadingProcessTool.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Loading\iLoadingProcessTool.designer.cs">
+      <DependentUpon>iLoadingProcessTool.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Loading\Loading Procees Screen.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Loading\Loading Procees Screen.designer.cs">
+      <DependentUpon>Loading Procees Screen.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Time\iDateTimeWrite.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Time\iDateTimeWrite.designer.cs">
+      <DependentUpon>iDateTimeWrite.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Time\iOverTimeStamp.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Time\iOverTimeStamp.designer.cs">
+      <DependentUpon>iOverTimeStamp.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Email\EmailCommon.cs" />
+    <Compile Include="Email\EmailCore.cs" />
+    <Compile Include="Email\iEmail.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Email\iEmail.designer.cs">
+      <DependentUpon>iEmail.cs</DependentUpon>
+    </Compile>
+    <Compile Include="iCloudTie.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="iCloudTie.Designer.cs">
+      <DependentUpon>iCloudTie.cs</DependentUpon>
+    </Compile>
+    <Compile Include="iWebPort.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="iWebPort.Designer.cs">
+      <DependentUpon>iWebPort.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Logger\AlarmLoggerCommon.cs" />
+    <Compile Include="Logger\DataLoggerCommon.cs" />
+    <Compile Include="Logger\frmAlarmLoggerSettings.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Logger\frmAlarmLoggerSettings.designer.cs">
+      <DependentUpon>frmAlarmLoggerSettings.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Logger\frmDataLoggerSettings.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Logger\frmDataLoggerSettings.designer.cs">
+      <DependentUpon>frmDataLoggerSettings.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Logger\iAlarmLogger.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Logger\iAlarmLogger.designer.cs">
+      <DependentUpon>iAlarmLogger.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Logger\iDataLogger.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Logger\iDataLogger.designer.cs">
+      <DependentUpon>iDataLogger.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+    <Compile Include="Properties\Settings.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+      <DependentUpon>Settings.settings</DependentUpon>
+    </Compile>
+    <Compile Include="Report\frmAlarmReporterSettings.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Report\frmAlarmReporterSettings.designer.cs">
+      <DependentUpon>frmAlarmReporterSettings.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Report\frmDataReporterSettings.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Report\frmDataReporterSettings.designer.cs">
+      <DependentUpon>frmDataReporterSettings.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Report\iAlarmReporter.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Report\iAlarmReporter.designer.cs">
+      <DependentUpon>iAlarmReporter.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Report\iDataReporter.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Report\iDataReporter.designer.cs">
+      <DependentUpon>iDataReporter.cs</DependentUpon>
+    </Compile>
+    <Compile Include="SMS\iSMS.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="SMS\iSMS.Designer.cs">
+      <DependentUpon>iSMS.cs</DependentUpon>
+    </Compile>
+    <Compile Include="SMS\SMSCommon.cs" />
+    <Compile Include="SMS\SMSCore.cs" />
+    <Compile Include="Trend\frmRealtimeTrendSettings.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Trend\frmRealtimeTrendSettings.designer.cs">
+      <DependentUpon>frmRealtimeTrendSettings.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Trend\Historical Trend Settings.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Trend\Historical Trend Settings.designer.cs">
+      <DependentUpon>Historical Trend Settings.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Trend\iHistoricalTrend.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Trend\iHistoricalTrend.designer.cs">
+      <DependentUpon>iHistoricalTrend.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Trend\iRealtimeTrend.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Trend\iRealtimeTrend.designer.cs">
+      <DependentUpon>iRealtimeTrend.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Trend\TrendCommon.cs" />
+    <Compile Include="Trend\TrendTag.cs" />
+    <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
+    <Service Include="{94E38DFF-614B-4cbd-B67C-F211BB35CE8B}" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Logger\iAlarmLoggerSettings.resx">
+      <DependentUpon>iAlarmLoggerSettings.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Alarm\iAlarmStatus.resx">
+      <DependentUpon>iAlarmStatus.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Alarm\iAlarmViewer.resx">
+      <DependentUpon>iAlarmViewer.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Authentication\iCreateUserAccount.resx">
+      <DependentUpon>iCreateUserAccount.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Authentication\iLogin.resx">
+      <DependentUpon>iLogin.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Authentication\iUpdateUserAccount.resx">
+      <DependentUpon>iUpdateUserAccount.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Data\iInput.resx">
+      <DependentUpon>iInput.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Data\iStatus.resx">
+      <DependentUpon>iStatus.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Loading\Loading Procees Screen.resx">
+      <DependentUpon>Loading Procees Screen.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Time\iOverTimeStamp.resx">
+      <DependentUpon>iOverTimeStamp.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Email\iEmail.resx">
+      <DependentUpon>iEmail.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Logger\frmAlarmLoggerSettings.resx">
+      <DependentUpon>frmAlarmLoggerSettings.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Logger\frmDataLoggerSettings.resx">
+      <DependentUpon>frmDataLoggerSettings.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Report\frmAlarmReporterSettings.resx">
+      <DependentUpon>frmAlarmReporterSettings.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Report\frmDataReporterSettings.resx">
+      <DependentUpon>frmDataReporterSettings.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Report\iAlarmReporter.resx">
+      <DependentUpon>iAlarmReporter.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Report\iDataReporter.resx">
+      <DependentUpon>iDataReporter.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="SMS\iSMS.resx">
+      <DependentUpon>iSMS.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Trend\frmRealtimeTrendSettings.resx">
+      <DependentUpon>frmRealtimeTrendSettings.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Trend\Historical Trend Settings.resx">
+      <DependentUpon>Historical Trend Settings.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Trend\iHistoricalTrend.resx">
+      <DependentUpon>iHistoricalTrend.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Trend\iRealtimeTrend.resx">
+      <DependentUpon>iRealtimeTrend.cs</DependentUpon>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="app.config" />
+    <None Include="packages.config" />
+    <None Include="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Service\" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\tenor-1--unscreen.gif" />
+    <None Include="Resources\ezgif-3-6218c5127a95.gif" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>
