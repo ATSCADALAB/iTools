@@ -12,7 +12,7 @@ namespace ATSCADA.iWinTools.Alarm
         private readonly DataTool dataLowLevel;
 
         private readonly DataTool dataHighLevel;
-
+        private double temp = 0.0000001;
         public AlarmParametter Parametter { get; }
 
         public Condition ActiveCondition { get; private set; }
@@ -47,7 +47,7 @@ namespace ATSCADA.iWinTools.Alarm
             //    this.dataLowLevel.Tag.TagValueChanged += (sender, e) => CheckAlarm(true);
             //    this.dataLowLevel.Tag.TagStatusChanged += (sender, e) => CheckAlarm(true);
             //}
-                
+
 
             //if (this.dataHighLevel.IsTag)
             //{
@@ -138,6 +138,7 @@ namespace ATSCADA.iWinTools.Alarm
             },
             forceRaiseEvent);
         }
+
 
         private void OnAlarm(AlarmStatusChangedEventArgs e, bool forceRaiseEvent)
         {

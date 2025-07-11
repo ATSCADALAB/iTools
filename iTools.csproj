@@ -101,6 +101,7 @@
     <Compile Include="Database\DatabaseType.cs" />
     <Compile Include="Database\MSSQLHelper.cs" />
     <Compile Include="Encyption\MD5.cs" />
+    <Compile Include="License\LicenseManager.cs" />
     <Compile Include="Logger\DataLogParam.cs" />
     <Compile Include="Logger\iAlarmLoggerSettings.cs">
       <SubType>UserControl</SubType>
