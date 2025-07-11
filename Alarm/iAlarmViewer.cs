@@ -75,7 +75,7 @@ namespace ATSCADA.iWinTools.Alarm
             this.tabControl.SelectedIndexChanged += TabControl_SelectedIndexChanged;
 
             // Setup DataGridView columns
-            SetupDataGridColumns();
+            //SetupDataGridColumns();
         }
 
         private void IAlarmViewer_Load(object sender, EventArgs e)
