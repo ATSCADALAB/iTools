@@ -47,7 +47,9 @@ namespace ATSCADA.iWinTools.Logger
                 if (driver != null) driver.ConstructionCompleted += Driver_ConstructionCompleted;
             }
         }
-
+        [Category("ATSCADA Settings")]
+        [Description("Name of the active alarms table.")]
+        public string ActiveAlarmsTableName { get; set; } = "activealarms";
         [Category("ATSCADA Settings")]
         [Description("Select tag for ATSCADA control.")]
         [Editor(typeof(SmartTagEditor), typeof(UITypeEditor))]
@@ -190,8 +192,9 @@ namespace ATSCADA.iWinTools.Logger
                 InitializeAlarmSystem();
 
                 // Tạo alarm tags với logic mới
+                CreateActiveAlarmsTable();
                 CreateAlarmTag();
-
+                SyncActiveAlarmsOnStartup();
                 LogSystemEvent($"AlarmLogger initialized successfully with {this.alarmSettingsItems.Count} alarm configurations");
 
                 // Hiển thị license info khi khởi tạo thành công
@@ -665,6 +668,7 @@ namespace ATSCADA.iWinTools.Logger
                     currentAlarmCount++;
                     UpdateAlarmCounter(currentAlarmCount);
                     UpdateAlarmResult(true);
+                    HandleActiveAlarmStatusChanged(e);
                     // Nếu là alarm đầu tiên, bật Result
                     if (currentAlarmCount == 1)
                     {
@@ -703,7 +707,9 @@ namespace ATSCADA.iWinTools.Logger
                     // KHÔNG thay đổi count - vì cùng 1 tag
                 }
                 // Trường hợp (!isCurrentlyInAlarm && !wasInAlarm) = không làm gì
+                HandleActiveAlarmStatusChanged(e);
             }
+            
         }
 
         #endregion
@@ -973,5 +979,225 @@ namespace ATSCADA.iWinTools.Logger
         }
 
         #endregion
+        private void CreateActiveAlarmsTable()
+        {
+            try
+            {
+                if (this.logConnector.CreateDatabaseIfNotExists(DatabaseLog))
+                {
+                    if (this.logConnector.CreateTableIfNotExists(DatabaseLog))
+                    {
+                        if (this.logConnector.CreateActiveAlarmsTableIfNotExists(DatabaseLog, ActiveAlarmsTableName))
+                        {
+                            LogSystemEvent($"Active alarms table '{ActiveAlarmsTableName}' ready");
+                        }
+                        else
+                        {
+                            LogSystemEvent($"Failed to create active alarms table '{ActiveAlarmsTableName}'");
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                LogSystemEvent($"Error creating active alarms table: {ex.Message}");
+            }
+        }
+        private void SyncActiveAlarmsOnStartup()
+        {
+            try
+            {
+                LogSystemEvent("Syncing active alarms on startup...");
+
+                // Đợi một chút để các tag ổn định
+                System.Threading.Thread.Sleep(500);
+
+                foreach (var alarmSettingsItem in this.alarmSettingsItems)
+                {
+                    try
+                    {
+                        var alarmParam = alarmSettingsItem.AlarmParametter;
+
+                        // Check trạng thái hiện tại của tag này
+                        bool isCurrentlyInAlarm = CheckIfTagInAlarm(alarmParam);
+
+                        if (isCurrentlyInAlarm)
+                        {
+                            // Tạo alarm event để add vào active table
+                            var alarmEvent = CreateAlarmEventFromCurrent(alarmParam);
+                            if (alarmEvent != null)
+                            {
+                                bool success = this.logConnector.AddActiveAlarm(DatabaseLog, ActiveAlarmsTableName, alarmEvent);
+                                if (success)
+                                {
+                                    LogSystemEvent($"Startup sync: Added active alarm for {alarmParam.Tracking}");
+                                }
+                            }
+                        }
+                        else
+                        {
+                            // Xóa khỏi active table nếu có (case: tag đã về normal khi app tắt)
+                            this.logConnector.RemoveActiveAlarm(DatabaseLog, ActiveAlarmsTableName, alarmParam.Tracking);
+                            LogSystemEvent($"Startup sync: Ensured {alarmParam.Tracking} not in active alarms");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        LogSystemEvent($"Error syncing startup alarm for {alarmSettingsItem.AlarmParametter.Tracking}: {ex.Message}");
+                    }
+                }
+
+                LogSystemEvent("Active alarms startup sync completed");
+            }
+            catch (Exception ex)
+            {
+                LogSystemEvent($"Error in startup sync: {ex.Message}");
+            }
+        }
+        private bool CheckIfTagInAlarm(AlarmParametter alarmParam)
+        {
+            try
+            {
+                // Đọc giá trị hiện tại
+                var trackingTag = this.driver.GetTagByName(alarmParam.Tracking);
+                if (trackingTag == null || trackingTag.Status != "Good")
+                {
+                    return false; // Không thể đọc = không alarm
+                }
+
+                if (!TryParseDouble(trackingTag.Value, out double trackingValue))
+                {
+                    return false;
+                }
+
+                // Parse levels
+                if (!ParseAlarmLevel(alarmParam.LowLevel, "LowLevel", alarmParam.Tracking, out double lowValue) ||
+                    !ParseAlarmLevel(alarmParam.HighLevel, "HighLevel", alarmParam.Tracking, out double highValue))
+                {
+                    return false;
+                }
+
+                // Check alarm logic (giống logic trong AlarmTag)
+                if (Math.Abs(highValue - lowValue) < 0.0001)
+                {
+                    // SetPoint alarm
+                    return Math.Abs(trackingValue - highValue) < 0.0001;
+                }
+                else if (highValue < lowValue)
+                {
+                    // Config error = alarm
+                    return true;
+                }
+                else
+                {
+                    // Range alarm
+                    return (trackingValue <= lowValue || trackingValue >= highValue);
+                }
+            }
+            catch
+            {
+                return false; // Lỗi = không alarm
+            }
+        }
+        private AlarmStatusChangedEventArgs CreateAlarmEventFromCurrent(AlarmParametter alarmParam)
+        {
+            try
+            {
+                // Đọc giá trị hiện tại
+                var trackingTag = this.driver.GetTagByName(alarmParam.Tracking);
+                if (!TryParseDouble(trackingTag.Value, out double trackingValue))
+                    trackingValue = 0;
+
+                if (!ParseAlarmLevel(alarmParam.LowLevel, "LowLevel", alarmParam.Tracking, out double lowValue))
+                    lowValue = 0;
+
+                if (!ParseAlarmLevel(alarmParam.HighLevel, "HighLevel", alarmParam.Tracking, out double highValue))
+                    highValue = 0;
+
+                // Xác định loại alarm
+                Condition alarmCondition;
+                if (Math.Abs(highValue - lowValue) < 0.0001)
+                {
+                    alarmCondition = new Condition(AlarmStatus.Alarm, "SetPoint Alarm");
+                }
+                else if (highValue < lowValue)
+                {
+                    alarmCondition = new Condition(AlarmStatus.SetPoint, "Configuration Error");
+                }
+                else if (trackingValue <= lowValue)
+                {
+                    alarmCondition = new Condition(AlarmStatus.LowAlarm, "Low Alarm");
+                }
+                else if (trackingValue >= highValue)
+                {
+                    alarmCondition = new Condition(AlarmStatus.HighAlarm, "High Alarm");
+                }
+                else
+                {
+                    alarmCondition = new Condition(AlarmStatus.Normal, "Normal");
+                }
+
+                // Tạo AlarmItem
+                var alarmItem = new AlarmItem()
+                {
+                    TrackingName = alarmParam.Tracking,
+                    TrackingAlias = alarmParam.Alias ?? alarmParam.Tracking,
+                    TrackingValue = trackingValue,
+                    LowLevel = lowValue,
+                    HighLevel = highValue
+                };
+
+                return new AlarmStatusChangedEventArgs()
+                {
+                    TimeStamp = DateTime.Now,
+                    Condition = alarmCondition,
+                    AlarmItem = alarmItem
+                };
+            }
+            catch (Exception ex)
+            {
+                LogSystemEvent($"Error creating alarm event for {alarmParam.Tracking}: {ex.Message}");
+                return null;
+            }
+        }
+        private void HandleActiveAlarmStatusChanged(AlarmStatusChangedEventArgs e)
+        {
+            try
+            {
+                string tagName = e.AlarmItem.TrackingName;
+                bool isInAlarm = e.Condition.Status != AlarmStatus.Normal;
+
+                if (isInAlarm)
+                {
+                    // Add or update active alarm
+                    bool success = this.logConnector.AddActiveAlarm(DatabaseLog, ActiveAlarmsTableName, e);
+                    if (success)
+                    {
+                        LogSystemEvent($"Active alarm added/updated: {tagName} - {e.Condition.Message}");
+                    }
+                    else
+                    {
+                        LogSystemEvent($"Failed to add/update active alarm: {tagName}");
+                    }
+                }
+                else
+                {
+                    // Remove from active alarms (alarm cleared)
+                    bool success = this.logConnector.RemoveActiveAlarm(DatabaseLog, ActiveAlarmsTableName, tagName);
+                    if (success)
+                    {
+                        LogSystemEvent($"Active alarm removed: {tagName} - Alarm cleared");
+                    }
+                    else
+                    {
+                        LogSystemEvent($"Failed to remove active alarm: {tagName}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                LogSystemEvent($"Error handling active alarm status for {e.AlarmItem.TrackingName}: {ex.Message}");
+            }
+        }
     }
 }

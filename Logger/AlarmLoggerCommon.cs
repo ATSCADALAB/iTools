@@ -292,7 +292,7 @@ namespace ATSCADA.iWinTools.Logger
     #endregion
 
     #region ALARM LOG CONNECTOR
-    
+
     public interface IAlarmLogConnector
     {
         IDatabaseHelper DatabaseHelper { get; set; }
@@ -302,6 +302,37 @@ namespace ATSCADA.iWinTools.Logger
         bool CreateTableIfNotExists(DatabaseParametter parametter);
 
         bool InsertAlarm(DatabaseParametter parametter, AlarmStatusChangedEventArgs e);
+
+        /// <summary>
+        /// Create active alarms table if not exists
+        /// </summary>
+        /// <param name="parametter">Database parameters</param>
+        /// <param name="activeTableName">Name of the active alarms table</param>
+        bool CreateActiveAlarmsTableIfNotExists(DatabaseParametter parametter, string activeTableName);
+
+        /// <summary>
+        /// Add new alarm to active alarms table when alarm occurs
+        /// </summary>
+        /// <param name="parametter">Database parameters</param>
+        /// <param name="activeTableName">Name of the active alarms table</param>
+        /// <param name="e">Alarm event args</param>
+        bool AddActiveAlarm(DatabaseParametter parametter, string activeTableName, AlarmStatusChangedEventArgs e);
+
+        /// <summary>
+        /// Remove alarm from active alarms table when it becomes Normal
+        /// </summary>
+        /// <param name="parametter">Database parameters</param>
+        /// <param name="activeTableName">Name of the active alarms table</param>
+        /// <param name="tagName">Tag name to remove</param>
+        bool RemoveActiveAlarm(DatabaseParametter parametter, string activeTableName, string tagName);
+
+        /// <summary>
+        /// Update existing active alarm (value, status changed but still in alarm)
+        /// </summary>
+        /// <param name="parametter">Database parameters</param>
+        /// <param name="activeTableName">Name of the active alarms table</param>
+        /// <param name="e">Alarm event args</param>
+        bool UpdateActiveAlarm(DatabaseParametter parametter, string activeTableName, AlarmStatusChangedEventArgs e);
     }
 
     public class AlarmLogConnectorFactory
@@ -328,14 +359,13 @@ namespace ATSCADA.iWinTools.Logger
         {
             this.DatabaseHelper = new MySQLHelper();
         }
+
         public bool CreateDatabaseIfNotExists(DatabaseParametter parametter)
         {
             try
             {
                 this.DatabaseHelper.ConnectionString = $"Server={parametter.ServerName};Port={parametter.Port};Uid={parametter.UserID};Pwd={parametter.Password};";
-
-                var query = $"create database if not exists {parametter.DatabaseName}";
-
+                var query = $"create database if not exists `{parametter.DatabaseName}`";
                 return this.DatabaseHelper.ExecuteNonQuery(query) < 0 ? false : true;
             }
             catch { return false; }
@@ -346,8 +376,7 @@ namespace ATSCADA.iWinTools.Logger
             try
             {
                 this.DatabaseHelper.ConnectionString = $"Server={parametter.ServerName};Port={parametter.Port};Uid={parametter.UserID};Pwd={parametter.Password}; Database={parametter.DatabaseName}";
-                var query = $"create table if not exists {parametter.TableName} (DateTime Datetime NOT NULL, TagName VARCHAR(100) NOT NULl, TagAlias VARCHAR(100) NOT NULl, Value VARCHAR(45) NOT NULl, HighLevel VARCHAR(45) NOT NULl, LowLevel VARCHAR(45) NOT NULl, Status VARCHAR(200) NOT NULl, Acknowledged VARCHAR(45) NOT NULl )";
-
+                var query = $"create table if not exists `{parametter.TableName}` (`DateTime` Datetime NOT NULL, `TagName` VARCHAR(100) NOT NULL, `TagAlias` VARCHAR(100) NOT NULL, `Value` VARCHAR(45) NOT NULL, `HighLevel` VARCHAR(45) NOT NULL, `LowLevel` VARCHAR(45) NOT NULL, `Status` VARCHAR(200) NOT NULL, `Acknowledged` VARCHAR(45) NOT NULL)";
                 return this.DatabaseHelper.ExecuteNonQuery(query) < 0 ? false : true;
             }
             catch { return false; }
@@ -367,9 +396,104 @@ namespace ATSCADA.iWinTools.Logger
                 var lowLevel = e.AlarmItem.LowLevel;
                 var status = e.Condition.Message;
 
-                var query = $"insert into {parametter.TableName} values ('{dateTime}', '{tagName}', '{tagAlias}', '{value}', '{highLevel}', '{lowLevel}', '{status}', 'No')";
-
+                var query = $"insert into `{parametter.TableName}` values ('{dateTime}', '{tagName}', '{tagAlias}', '{value}', '{highLevel}', '{lowLevel}', '{status}', 'No')";
                 return this.DatabaseHelper.ExecuteNonQuery(query) < 0 ? false : true;
+            }
+            catch { return false; }
+        }
+
+        public bool CreateActiveAlarmsTableIfNotExists(DatabaseParametter parametter, string activeTableName)
+        {
+            try
+            {
+                this.DatabaseHelper.ConnectionString = $"Server={parametter.ServerName};Port={parametter.Port};Uid={parametter.UserID};Pwd={parametter.Password}; Database={parametter.DatabaseName}";
+                var query = $"create table if not exists `{activeTableName}` (`DateTime` Datetime NOT NULL, `TagName` VARCHAR(100) NOT NULL, `TagAlias` VARCHAR(100) NOT NULL, `Value` VARCHAR(45) NOT NULL, `HighLevel` VARCHAR(45) NOT NULL, `LowLevel` VARCHAR(45) NOT NULL, `Status` VARCHAR(200) NOT NULL, `Acknowledged` VARCHAR(45) NOT NULL, PRIMARY KEY (`TagName`))";
+                return this.DatabaseHelper.ExecuteNonQuery(query) < 0 ? false : true;
+            }
+            catch { return false; }
+        }
+
+        public bool AddActiveAlarm(DatabaseParametter parametter, string activeTableName, AlarmStatusChangedEventArgs e)
+        {
+            try
+            {
+                this.DatabaseHelper.ConnectionString = $"Server={parametter.ServerName};Port={parametter.Port};Uid={parametter.UserID};Pwd={parametter.Password}; Database={parametter.DatabaseName}";
+
+                var dateTime = e.TimeStamp.ToString("yyyy-MM-dd HH:mm:ss");
+                var tagName = e.AlarmItem.TrackingName;
+                var tagAlias = e.AlarmItem.TrackingAlias;
+                var value = e.AlarmItem.TrackingValue;
+                var highLevel = e.AlarmItem.HighLevel;
+                var lowLevel = e.AlarmItem.LowLevel;
+                var status = e.Condition.Message;
+
+                // Check if this tag already exists in active alarms table
+                var checkQuery = $"SELECT COUNT(*) FROM `{activeTableName}` WHERE `TagName` = '{tagName}'";
+                var existingCount = this.DatabaseHelper.ExecuteScalarQuery(checkQuery);
+
+                bool tagExists = false;
+                if (existingCount != null && int.TryParse(existingCount.ToString(), out int count))
+                {
+                    tagExists = count > 0;
+                }
+
+                string query;
+                if (tagExists)
+                {
+                    // Update existing active alarm (preserve ACK status)
+                    query = $@"UPDATE `{activeTableName}` 
+                              SET `DateTime` = '{dateTime}', 
+                                  `Value` = '{value}', 
+                                  `Status` = '{status}',
+                                  `HighLevel` = '{highLevel}',
+                                  `LowLevel` = '{lowLevel}'
+                              WHERE `TagName` = '{tagName}'";
+                }
+                else
+                {
+                    // Insert new active alarm (default ACK = No)
+                    query = $"INSERT INTO `{activeTableName}` VALUES ('{dateTime}', '{tagName}', '{tagAlias}', '{value}', '{highLevel}', '{lowLevel}', '{status}', 'No')";
+                }
+
+                return this.DatabaseHelper.ExecuteNonQuery(query) >= 0;
+            }
+            catch { return false; }
+        }
+
+        public bool RemoveActiveAlarm(DatabaseParametter parametter, string activeTableName, string tagName)
+        {
+            try
+            {
+                this.DatabaseHelper.ConnectionString = $"Server={parametter.ServerName};Port={parametter.Port};Uid={parametter.UserID};Pwd={parametter.Password}; Database={parametter.DatabaseName}";
+                var query = $"DELETE FROM `{activeTableName}` WHERE `TagName` = '{tagName}'";
+                return this.DatabaseHelper.ExecuteNonQuery(query) >= 0;
+            }
+            catch { return false; }
+        }
+
+        public bool UpdateActiveAlarm(DatabaseParametter parametter, string activeTableName, AlarmStatusChangedEventArgs e)
+        {
+            try
+            {
+                this.DatabaseHelper.ConnectionString = $"Server={parametter.ServerName};Port={parametter.Port};Uid={parametter.UserID};Pwd={parametter.Password}; Database={parametter.DatabaseName}";
+
+                var dateTime = e.TimeStamp.ToString("yyyy-MM-dd HH:mm:ss");
+                var tagName = e.AlarmItem.TrackingName;
+                var value = e.AlarmItem.TrackingValue;
+                var highLevel = e.AlarmItem.HighLevel;
+                var lowLevel = e.AlarmItem.LowLevel;
+                var status = e.Condition.Message;
+
+                // Update existing active alarm (preserve ACK status)
+                var query = $@"UPDATE `{activeTableName}` 
+                              SET `DateTime` = '{dateTime}', 
+                                  `Value` = '{value}', 
+                                  `Status` = '{status}',
+                                  `HighLevel` = '{highLevel}',
+                                  `LowLevel` = '{lowLevel}'
+                              WHERE `TagName` = '{tagName}'";
+
+                return this.DatabaseHelper.ExecuteNonQuery(query) >= 0;
             }
             catch { return false; }
         }
@@ -381,17 +505,16 @@ namespace ATSCADA.iWinTools.Logger
 
         public AlarmLogMSSQLConnector()
         {
-            this.DatabaseHelper = new MSSQLHelper();
+            this.DatabaseHelper = new MySQLHelper();
         }
+
         public bool CreateDatabaseIfNotExists(DatabaseParametter parametter)
         {
             try
             {
-                this.DatabaseHelper.ConnectionString = $"Server={parametter.ServerName},{parametter.Port};User Id={parametter.UserID};Password={parametter.Password};";
-                var query = $"if not exists(select * from sys.databases where name = '{parametter.DatabaseName}') create database [{parametter.DatabaseName}]";
-
-                this.DatabaseHelper.ExecuteNonQuery(query);
-                return true;
+                this.DatabaseHelper.ConnectionString = $"Server={parametter.ServerName};Port={parametter.Port};Uid={parametter.UserID};Pwd={parametter.Password};";
+                var query = $"create database if not exists `{parametter.DatabaseName}`";
+                return this.DatabaseHelper.ExecuteNonQuery(query) < 0 ? false : true;
             }
             catch { return false; }
         }
@@ -400,13 +523,9 @@ namespace ATSCADA.iWinTools.Logger
         {
             try
             {
-                this.DatabaseHelper.ConnectionString = $"Server={parametter.ServerName},{parametter.Port};User Id={parametter.UserID};Password={parametter.Password};Database={parametter.DatabaseName}";
-                var query = $"if not exists (select object_id from sys.tables where name = '{parametter.TableName}' and schema_name(schema_id) = 'dbo')" +
-                    $"create table [{parametter.DatabaseName}].[dbo].[{parametter.TableName}]" +
-                    $"([DateTime] Datetime not null, [TagName] varchar(100) not null, [TagAlias] varchar(100) not null, [Value] varchar(45) not null, [HighLevel] varchar(45) not null, [LowLevel] varchar(45) not null, [Status] varchar(200) not null, [Acknowledged] varchar(45) not null)";
-
-                this.DatabaseHelper.ExecuteNonQuery(query);
-                return true;
+                this.DatabaseHelper.ConnectionString = $"Server={parametter.ServerName};Port={parametter.Port};Uid={parametter.UserID};Pwd={parametter.Password}; Database={parametter.DatabaseName}";
+                var query = $"create table if not exists `{parametter.TableName}` (`DateTime` Datetime NOT NULL, `TagName` VARCHAR(100) NOT NULL, `TagAlias` VARCHAR(100) NOT NULL, `Value` VARCHAR(45) NOT NULL, `HighLevel` VARCHAR(45) NOT NULL, `LowLevel` VARCHAR(45) NOT NULL, `Status` VARCHAR(200) NOT NULL, `Acknowledged` VARCHAR(45) NOT NULL)";
+                return this.DatabaseHelper.ExecuteNonQuery(query) < 0 ? false : true;
             }
             catch { return false; }
         }
@@ -415,7 +534,7 @@ namespace ATSCADA.iWinTools.Logger
         {
             try
             {
-                this.DatabaseHelper.ConnectionString = $"Server={parametter.ServerName},{parametter.Port};User Id={parametter.UserID};Password={parametter.Password};Database={parametter.DatabaseName}";
+                this.DatabaseHelper.ConnectionString = $"Server={parametter.ServerName};Port={parametter.Port};Uid={parametter.UserID};Pwd={parametter.Password}; Database={parametter.DatabaseName}";
 
                 var dateTime = e.TimeStamp.ToString("yyyy-MM-dd HH:mm:ss");
                 var tagName = e.AlarmItem.TrackingName;
@@ -425,13 +544,107 @@ namespace ATSCADA.iWinTools.Logger
                 var lowLevel = e.AlarmItem.LowLevel;
                 var status = e.Condition.Message;
 
-                var query = $"insert into {parametter.TableName} values ('{dateTime}', '{tagName}', '{tagAlias}', '{value}', '{highLevel}', '{lowLevel}', '{status}', 'No')";
-
+                var query = $"insert into `{parametter.TableName}` values ('{dateTime}', '{tagName}', '{tagAlias}', '{value}', '{highLevel}', '{lowLevel}', '{status}', 'No')";
                 return this.DatabaseHelper.ExecuteNonQuery(query) < 0 ? false : true;
             }
             catch { return false; }
         }
-    }
 
+        public bool CreateActiveAlarmsTableIfNotExists(DatabaseParametter parametter, string activeTableName)
+        {
+            try
+            {
+                this.DatabaseHelper.ConnectionString = $"Server={parametter.ServerName};Port={parametter.Port};Uid={parametter.UserID};Pwd={parametter.Password}; Database={parametter.DatabaseName}";
+                var query = $"create table if not exists `{activeTableName}` (`DateTime` Datetime NOT NULL, `TagName` VARCHAR(100) NOT NULL, `TagAlias` VARCHAR(100) NOT NULL, `Value` VARCHAR(45) NOT NULL, `HighLevel` VARCHAR(45) NOT NULL, `LowLevel` VARCHAR(45) NOT NULL, `Status` VARCHAR(200) NOT NULL, `Acknowledged` VARCHAR(45) NOT NULL, PRIMARY KEY (`TagName`))";
+                return this.DatabaseHelper.ExecuteNonQuery(query) < 0 ? false : true;
+            }
+            catch { return false; }
+        }
+
+        public bool AddActiveAlarm(DatabaseParametter parametter, string activeTableName, AlarmStatusChangedEventArgs e)
+        {
+            try
+            {
+                this.DatabaseHelper.ConnectionString = $"Server={parametter.ServerName};Port={parametter.Port};Uid={parametter.UserID};Pwd={parametter.Password}; Database={parametter.DatabaseName}";
+
+                var dateTime = e.TimeStamp.ToString("yyyy-MM-dd HH:mm:ss");
+                var tagName = e.AlarmItem.TrackingName;
+                var tagAlias = e.AlarmItem.TrackingAlias;
+                var value = e.AlarmItem.TrackingValue;
+                var highLevel = e.AlarmItem.HighLevel;
+                var lowLevel = e.AlarmItem.LowLevel;
+                var status = e.Condition.Message;
+
+                // Check if this tag already exists in active alarms table
+                var checkQuery = $"SELECT COUNT(*) FROM `{activeTableName}` WHERE `TagName` = '{tagName}'";
+                var existingCount = this.DatabaseHelper.ExecuteScalarQuery(checkQuery);
+
+                bool tagExists = false;
+                if (existingCount != null && int.TryParse(existingCount.ToString(), out int count))
+                {
+                    tagExists = count > 0;
+                }
+
+                string query;
+                if (tagExists)
+                {
+                    // Update existing active alarm (preserve ACK status)
+                    query = $@"UPDATE `{activeTableName}` 
+                              SET `DateTime` = '{dateTime}', 
+                                  `Value` = '{value}', 
+                                  `Status` = '{status}',
+                                  `HighLevel` = '{highLevel}',
+                                  `LowLevel` = '{lowLevel}'
+                              WHERE `TagName` = '{tagName}'";
+                }
+                else
+                {
+                    // Insert new active alarm (default ACK = No)
+                    query = $"INSERT INTO `{activeTableName}` VALUES ('{dateTime}', '{tagName}', '{tagAlias}', '{value}', '{highLevel}', '{lowLevel}', '{status}', 'No')";
+                }
+
+                return this.DatabaseHelper.ExecuteNonQuery(query) >= 0;
+            }
+            catch { return false; }
+        }
+
+        public bool RemoveActiveAlarm(DatabaseParametter parametter, string activeTableName, string tagName)
+        {
+            try
+            {
+                this.DatabaseHelper.ConnectionString = $"Server={parametter.ServerName};Port={parametter.Port};Uid={parametter.UserID};Pwd={parametter.Password}; Database={parametter.DatabaseName}";
+                var query = $"DELETE FROM `{activeTableName}` WHERE `TagName` = '{tagName}'";
+                return this.DatabaseHelper.ExecuteNonQuery(query) >= 0;
+            }
+            catch { return false; }
+        }
+
+        public bool UpdateActiveAlarm(DatabaseParametter parametter, string activeTableName, AlarmStatusChangedEventArgs e)
+        {
+            try
+            {
+                this.DatabaseHelper.ConnectionString = $"Server={parametter.ServerName};Port={parametter.Port};Uid={parametter.UserID};Pwd={parametter.Password}; Database={parametter.DatabaseName}";
+
+                var dateTime = e.TimeStamp.ToString("yyyy-MM-dd HH:mm:ss");
+                var tagName = e.AlarmItem.TrackingName;
+                var value = e.AlarmItem.TrackingValue;
+                var highLevel = e.AlarmItem.HighLevel;
+                var lowLevel = e.AlarmItem.LowLevel;
+                var status = e.Condition.Message;
+
+                // Update existing active alarm (preserve ACK status)
+                var query = $@"UPDATE `{activeTableName}` 
+                              SET `DateTime` = '{dateTime}', 
+                                  `Value` = '{value}', 
+                                  `Status` = '{status}',
+                                  `HighLevel` = '{highLevel}',
+                                  `LowLevel` = '{lowLevel}'
+                              WHERE `TagName` = '{tagName}'";
+
+                return this.DatabaseHelper.ExecuteNonQuery(query) >= 0;
+            }
+            catch { return false; }
+        }
+    }
     #endregion
 }

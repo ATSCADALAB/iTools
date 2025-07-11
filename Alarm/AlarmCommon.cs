@@ -70,28 +70,37 @@ namespace ATSCADA.iWinTools.Alarm
 
         bool CreateTableIfNotExists(DatabaseParametter parametter);
 
+        /// <summary>
+        /// Create active alarms table if not exists
+        /// </summary>
+        /// <param name="parametter">Database parameters</param>
+        /// <param name="activeTableName">Name of the active alarms table</param>
+        bool CreateActiveAlarmsTableIfNotExists(DatabaseParametter parametter, string activeTableName);
+
         DataTable GetDataTableAlarm(DatabaseParametter parametter, uint rowNumber);
+
+        /// <summary>
+        /// Get active alarms from the dedicated active alarms table
+        /// (Data is maintained by AlarmLogger)
+        /// </summary>
+        /// <param name="parametter">Database parameters</param>
+        /// <param name="activeTableName">Name of the active alarms table</param>
+        /// <param name="rowNumber">Maximum number of rows to return</param>
+        DataTable GetActiveAlarmsFromTable(DatabaseParametter parametter, string activeTableName, uint rowNumber);
+
+        /// <summary>
+        /// Update ACK status for active alarm
+        /// (For ACK button functionality)
+        /// </summary>
+        /// <param name="parametter">Database parameters</param>
+        /// <param name="activeTableName">Name of the active alarms table</param>
+        /// <param name="tagName">Tag name to update</param>
+        /// <param name="acknowledged">ACK status</param>
+        bool UpdateActiveAlarmACK(DatabaseParametter parametter, string activeTableName,
+                                 string tagName, bool acknowledged);
 
         bool Acknowledged(DatabaseParametter parametter);
     }
-
-    public class AlarmViewerConnectorFactory
-    {
-        public static IAlarmViewerConnector GetConnector(DatabaseType type)
-        {
-            switch (type)
-            {
-                case DatabaseType.MySQL:
-                    return new AlarmViewMySQLConnector();
-                case DatabaseType.MSSQL:
-                    return new AlarmViewMSSQLConnector();
-                default:
-                    return new AlarmViewMySQLConnector();
-            }
-        }
-    }
-
-
     public class AlarmViewMySQLConnector : IAlarmViewerConnector
     {
         public IDatabaseHelper DatabaseHelper { get; set; }
@@ -100,12 +109,12 @@ namespace ATSCADA.iWinTools.Alarm
         {
             this.DatabaseHelper = new MySQLHelper();
         }
+
         public bool CreateDatabaseIfNotExists(DatabaseParametter parametter)
         {
             try
             {
                 this.DatabaseHelper.ConnectionString = $"Server={parametter.ServerName};Port={parametter.Port};Uid={parametter.UserID};Pwd={parametter.Password};";
-
                 var query = $"create database if not exists `{parametter.DatabaseName}`";
                 return this.DatabaseHelper.ExecuteNonQuery(query) < 0 ? false : true;
             }
@@ -118,7 +127,17 @@ namespace ATSCADA.iWinTools.Alarm
             {
                 this.DatabaseHelper.ConnectionString = $"Server={parametter.ServerName};Port={parametter.Port};Uid={parametter.UserID};Pwd={parametter.Password};Database={parametter.DatabaseName}";
                 var query = $"create table if not exists `{parametter.TableName}` (`DateTime` Datetime not null, `TagName` varchar(100) not null, `TagAlias` varchar(100) not null, `Value` varchar(45) not null, `HighLevel` varchar(45) not null, `LowLevel` varchar(45) not null, `Status` varchar(200) not null, `Acknowledged` varchar(45) not null)";
+                return this.DatabaseHelper.ExecuteNonQuery(query) < 0 ? false : true;
+            }
+            catch { return false; }
+        }
 
+        public bool CreateActiveAlarmsTableIfNotExists(DatabaseParametter parametter, string activeTableName)
+        {
+            try
+            {
+                this.DatabaseHelper.ConnectionString = $"Server={parametter.ServerName};Port={parametter.Port};Uid={parametter.UserID};Pwd={parametter.Password};Database={parametter.DatabaseName}";
+                var query = $"create table if not exists `{activeTableName}` (`DateTime` Datetime not null, `TagName` varchar(100) not null, `TagAlias` varchar(100) not null, `Value` varchar(45) not null, `HighLevel` varchar(45) not null, `LowLevel` varchar(45) not null, `Status` varchar(200) not null, `Acknowledged` varchar(45) not null, PRIMARY KEY (`TagName`))";
                 return this.DatabaseHelper.ExecuteNonQuery(query) < 0 ? false : true;
             }
             catch { return false; }
@@ -129,95 +148,45 @@ namespace ATSCADA.iWinTools.Alarm
             try
             {
                 this.DatabaseHelper.ConnectionString = $"Server={parametter.ServerName};Port={parametter.Port};Uid={parametter.UserID};Pwd={parametter.Password};Database={parametter.DatabaseName}";
-                var query = $"select * from {parametter.TableName} order by `DateTime` desc limit 0, {rowNumber}";
-
+                var query = $"select * from `{parametter.TableName}` order by `DateTime` desc limit 0, {rowNumber}";
                 return this.DatabaseHelper.ExecuteQuery(query);
             }
             catch { return null; }
         }
 
+        public DataTable GetActiveAlarmsFromTable(DatabaseParametter parametter, string activeTableName, uint rowNumber)
+        {
+            try
+            {
+                this.DatabaseHelper.ConnectionString = $"Server={parametter.ServerName};Port={parametter.Port};Uid={parametter.UserID};Pwd={parametter.Password};Database={parametter.DatabaseName}";
+                var query = $"select * from `{activeTableName}` order by `DateTime` desc limit 0, {rowNumber}";
+                return this.DatabaseHelper.ExecuteQuery(query);
+            }
+            catch { return null; }
+        }
+
+        public bool UpdateActiveAlarmACK(DatabaseParametter parametter, string activeTableName,
+                                       string tagName, bool acknowledged)
+        {
+            try
+            {
+                this.DatabaseHelper.ConnectionString = $"Server={parametter.ServerName};Port={parametter.Port};Uid={parametter.UserID};Pwd={parametter.Password};Database={parametter.DatabaseName}";
+                var ackValue = acknowledged ? "Yes" : "No";
+                var query = $"UPDATE `{activeTableName}` SET `Acknowledged` = '{ackValue}' WHERE `TagName` = '{tagName}'";
+                return this.DatabaseHelper.ExecuteNonQuery(query) >= 0;
+            }
+            catch { return false; }
+        }
+
         public bool Acknowledged(DatabaseParametter parametter)
         {
             try
             {
                 this.DatabaseHelper.ConnectionString = $"Server={parametter.ServerName};Port={parametter.Port};Uid={parametter.UserID};Pwd={parametter.Password};Database={parametter.DatabaseName}";
-                var query = $"update {parametter.TableName} set `Acknowledged` = 'Yes' where `Acknowledged` = 'No'";
-
+                var query = $"update `{parametter.TableName}` set `Acknowledged` = 'Yes' where `Acknowledged` = 'No'";
                 return this.DatabaseHelper.ExecuteNonQuery(query) < 0 ? false : true;
             }
             catch { return false; }
-        }
-    }
-
-    public class AlarmViewMSSQLConnector : IAlarmViewerConnector
-    {
-        public IDatabaseHelper DatabaseHelper { get; set; }
-
-        public AlarmViewMSSQLConnector()
-        {
-            this.DatabaseHelper = new MSSQLHelper();
-        }
-        public bool CreateDatabaseIfNotExists(DatabaseParametter parametter)
-        {
-            try
-            {
-                this.DatabaseHelper.ConnectionString = $"Server={parametter.ServerName},{parametter.Port};User Id={parametter.UserID};Password={parametter.Password};";
-                var query = $"if not exists(select * from sys.databases where name = '{parametter.DatabaseName}') create database [{parametter.DatabaseName}]";
-
-                this.DatabaseHelper.ExecuteNonQuery(query);
-                return true;
-            }
-            catch
-            { 
-                return false; 
-            }
-        }
-
-        public bool CreateTableIfNotExists(DatabaseParametter parametter)
-        {
-            try
-            {
-                this.DatabaseHelper.ConnectionString = $"Server={parametter.ServerName},{parametter.Port};User Id={parametter.UserID};Password={parametter.Password};Database={parametter.DatabaseName}";
-                var query = $"if not exists (select object_id from sys.tables where name = '{parametter.TableName}' and schema_name(schema_id) = 'dbo')" +
-                    $"create table [{parametter.DatabaseName}].[dbo].[{parametter.TableName}]" +
-                    $"([DateTime] Datetime not null, [TagName] varchar(100) not null, [TagAlias] varchar(100) not null, [Value] varchar(45) not null, [HighLevel] varchar(45) not null, [LowLevel] varchar(45) not null, [Status] varchar(200) not null, [Acknowledged] varchar(45) not null)";
-
-                this.DatabaseHelper.ExecuteNonQuery(query);
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        public DataTable GetDataTableAlarm(DatabaseParametter parametter, uint rowNumber)
-        {
-            try
-            {
-                this.DatabaseHelper.ConnectionString = $"Server={parametter.ServerName},{parametter.Port};User Id={parametter.UserID};Password={parametter.Password};Database={parametter.DatabaseName}";
-                var query = $"select top {rowNumber} * from [{parametter.TableName}] order by [DateTime] desc";
-                return this.DatabaseHelper.ExecuteQuery(query);
-            }
-            catch
-            {
-                return default;
-            }
-        }
-
-        public bool Acknowledged(DatabaseParametter parametter)
-        {
-            try
-            {
-                this.DatabaseHelper.ConnectionString = $"Server={parametter.ServerName},{parametter.Port};User Id={parametter.UserID};Password={parametter.Password};Database={parametter.DatabaseName}";
-                var query = $"update [{parametter.TableName}] set [Acknowledged] = 'Yes' where [Acknowledged] = 'No'";
-
-                return this.DatabaseHelper.ExecuteNonQuery(query) < 0 ? false : true;
-            }
-            catch
-            {
-                return false;
-            }
         }
     }
 }
