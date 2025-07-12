@@ -75,7 +75,7 @@ namespace ATSCADA.iWinTools.Alarm
             this.tabControl.SelectedIndexChanged += TabControl_SelectedIndexChanged;
 
             // Setup DataGridView columns
-            //SetupDataGridColumns();
+            SetupDataGridColumns();
         }
 
         private void IAlarmViewer_Load(object sender, EventArgs e)
@@ -146,7 +146,7 @@ namespace ATSCADA.iWinTools.Alarm
 
         private void SetupGridViewColumns(DataGridView dgv)
         {
-            dgv.AutoGenerateColumns = false;
+            dgv.AutoGenerateColumns = true;
             dgv.Columns.Clear();
 
             // Add fixed columns
@@ -155,7 +155,6 @@ namespace ATSCADA.iWinTools.Alarm
                 Name = "DateTime",
                 HeaderText = "Time",
                 DataPropertyName = "DateTime",
-                Width = 140,
                 DefaultCellStyle = new DataGridViewCellStyle { Format = "dd/MM/yyyy HH:mm:ss" }
             });
 
@@ -164,7 +163,6 @@ namespace ATSCADA.iWinTools.Alarm
                 Name = "TagName",
                 HeaderText = "Tag Name",
                 DataPropertyName = "TagName",
-                Width = 120
             });
 
             dgv.Columns.Add(new DataGridViewTextBoxColumn
@@ -172,7 +170,6 @@ namespace ATSCADA.iWinTools.Alarm
                 Name = "TagAlias",
                 HeaderText = "Alias",
                 DataPropertyName = "TagAlias",
-                Width = 150
             });
 
             dgv.Columns.Add(new DataGridViewTextBoxColumn
@@ -180,7 +177,6 @@ namespace ATSCADA.iWinTools.Alarm
                 Name = "Value",
                 HeaderText = "Value",
                 DataPropertyName = "Value",
-                Width = 80
             });
 
             dgv.Columns.Add(new DataGridViewTextBoxColumn
@@ -188,7 +184,6 @@ namespace ATSCADA.iWinTools.Alarm
                 Name = "HighLevel",
                 HeaderText = "High Level",
                 DataPropertyName = "HighLevel",
-                Width = 80
             });
 
             dgv.Columns.Add(new DataGridViewTextBoxColumn
@@ -196,7 +191,6 @@ namespace ATSCADA.iWinTools.Alarm
                 Name = "LowLevel",
                 HeaderText = "Low Level",
                 DataPropertyName = "LowLevel",
-                Width = 80
             });
 
             dgv.Columns.Add(new DataGridViewTextBoxColumn
@@ -204,7 +198,6 @@ namespace ATSCADA.iWinTools.Alarm
                 Name = "Status",
                 HeaderText = "Status",
                 DataPropertyName = "Status",
-                Width = 80
             });
 
             dgv.Columns.Add(new DataGridViewTextBoxColumn
@@ -212,8 +205,8 @@ namespace ATSCADA.iWinTools.Alarm
                 Name = "Acknowledged",
                 HeaderText = "ACK",
                 DataPropertyName = "Acknowledged",
-                Width = 60
             });
+            dgv.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
         }
 
         private void UpdateAlarmViewer()
